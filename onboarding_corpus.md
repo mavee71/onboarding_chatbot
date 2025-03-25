@@ -38,7 +38,7 @@ In Edison, ED,, both new ship to and new bill to addresses require compliance ap
 
 ## Compliance and Controller Contacts
 
-Kim Dooley is the Edison, ED, compliance approval process expert. Edison compliance approvals are initiated through Salesforce. If you have questions about how to action the Edison, ED, Salesforce compliance approval, you can contact Kim Dooley.
+Kim Dooley is the Edison, ED, compliance approval process leader. Edison compliance approvals are initiated through Salesforce. If you have questions about how to action the Edison, ED, Salesforce compliance approval, you can contact Kim Dooley.
 
 Rosy Perez is the Westinghouse, WH, controller for Wabtec Global Services, WGS. Rosy only needs to approve new customers.
 

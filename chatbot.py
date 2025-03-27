@@ -4,13 +4,14 @@ import os
 from dotenv import load_dotenv
 
 # import pinecone
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone
 
 # import langchain
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain.callbacks.base import BaseCallbackHandler
 
 # Streamlit app layout
 st.title("Oracle ERP FCS Customer Onboarding Assistant")
@@ -24,13 +25,12 @@ index = os.environ['PINECONE_INDEX_NAME']
 namespace = os.environ['PINECONE_NAMESPACE_NAME']
 
 # initialize embeddings model + vector store
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large",api_key=os.environ.get("OPENAI_API_KEY"))
+embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.environ.get("OPENAI_API_KEY"))
 vector_store = PineconeVectorStore.from_existing_index(index_name=index, embedding=embeddings, namespace=namespace)
 
 # initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
     st.session_state.messages.append(SystemMessage("You are a world class assistant for question-answering tasks. "))
 
 # display chat messages from history on app rerun
@@ -58,10 +58,11 @@ if prompt:
 
     st.session_state.messages.append(HumanMessage(prompt))
 
-    # initialize the llm
+    # initialize the llm with streaming enabled
     llm = ChatOpenAI(
         model="gpt-4o-mini",
-        temperature=0.7
+        temperature=0.7,
+        streaming=True  # Enable streaming
     )
 
     # creating and invoking the retriever
@@ -74,9 +75,9 @@ if prompt:
     docs_text = "".join(d.page_content for d in docs)
 
     # creating the system prompt
-    system_prompt = """You are world class assistant for question-answering tasks. 
-    Use the following pieces of retrieved context to answer the question abstractly. Do not simply repeat the context. 
-    If you don't know the answer, politely inform the question is outside of your knowledge scope. 
+    system_prompt = """You are world class assistant for question-answering tasks.
+    Use the following pieces of retrieved context to answer the question abstractly. Do not simply repeat the context.
+    If you don't know the answer, politely inform the question is outside of your knowledge scope.
     Context: {context}:"""
 
     # Populate the system prompt with the retrieved context
@@ -88,11 +89,18 @@ if prompt:
     # adding the system prompt to the message history
     st.session_state.messages.append(SystemMessage(system_prompt_fmt))
 
-    # invoking the llm
-    result = llm.invoke(st.session_state.messages).content
-
-    # adding the response from the llm to the screen (and chat)
+    # Create an empty container to display the streaming response
     with st.chat_message("assistant"):
-        st.markdown(result)
+        response_container = st.empty()
 
-    st.session_state.messages.append(AIMessage(result))
+        # Initialize an empty string to accumulate the response
+        full_response = ""
+
+        # Stream the response from the LLM
+        for chunk in llm.stream(st.session_state.messages):
+            if chunk.content is not None:
+                full_response += chunk.content
+                response_container.markdown(full_response)
+
+    # Add the full response to the session state
+    st.session_state.messages.append(AIMessage(full_response))
